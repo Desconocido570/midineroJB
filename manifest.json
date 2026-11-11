@@ -1,0 +1,9 @@
+{
+  "name": "Mi Dinero - Finanzas personales",
+  "short_name": "Mi Dinero",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0b1018",
+  "theme_color": "#10151f",
+  "description": "Control personal de ingresos, quincenas, pagos y ahorro."
+}

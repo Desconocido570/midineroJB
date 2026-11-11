@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#10151f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Mi Dinero">
+  <title>Mi Dinero</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    :root{color-scheme:dark;--bg:#0b1018;--panel:#141c29;--panel2:#1b2636;--line:#2a374a;--muted:#9aabc0;--text:#f4f7fb;--green:#43d6a0;--yellow:#f4bd61;--blue:#78aaff;--red:#ff7777}
+    *{box-sizing:border-box} body{margin:0;background:radial-gradient(ellipse at top,#182437 0,#0b1018 48%);color:var(--text);font:15px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+    .wrap{max-width:760px;margin:auto;padding:18px 15px 40px}.top{display:flex;justify-content:space-between;align-items:center;margin:8px 0 18px}.brand{font-size:20px;font-weight:800;letter-spacing:.08em}.sub{color:var(--muted);font-size:12px;margin-top:4px}.pill{border:1px solid #315846;color:var(--green);padding:6px 10px;border-radius:999px;font-size:11px}
+    .hero{background:linear-gradient(135deg,#1a3041,#172235 70%);border:1px solid #30445b;border-radius:22px;padding:20px;margin-bottom:14px;box-shadow:0 16px 40px #0005}.eyebrow{font-size:11px;color:#b4c6d9;text-transform:uppercase;letter-spacing:.12em}.balance{font-size:36px;font-weight:800;margin:7px 0}.muted{color:var(--muted)}.small{font-size:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}.card{background:var(--panel);border:1px solid var(--line);border-radius:17px;padding:14px;min-width:0}.card h3{margin:0 0 8px;font-size:14px}.amount{font-size:22px;font-weight:750}.green{color:var(--green)}.yellow{color:var(--yellow)}.blue{color:var(--blue)}.red{color:var(--red)}
+    .section{margin:20px 0}.section-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.section-head h2{font-size:17px;margin:0}.bar{height:9px;background:#263448;border-radius:99px;overflow:hidden;display:flex;margin:10px 0}.bar span{height:100%}.row{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid #263346}.row:last-child{border-bottom:0}.row strong{white-space:nowrap}.tag{font-size:10px;border-radius:999px;padding:4px 8px;background:#263449;color:#c4d2e3}.tag.ok{background:#153b32;color:#83edc2}.tag.warn{background:#49351e;color:#ffd18a}
+    button,.btn{border:0;border-radius:12px;padding:12px 14px;background:#26384f;color:#f4f7fb;font-weight:650;font-size:13px;cursor:pointer}button.primary{background:var(--green);color:#08251c}button.ghost{background:#202c3d;border:1px solid var(--line)}button.danger{background:#48272d;color:#ffb4b4}.actions{display:flex;gap:8px;flex-wrap:wrap}.actions button{flex:1}.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:16px 0}.tabs button{padding:10px 4px;font-size:12px}.tabs button.active{background:var(--green);color:#08251c}
+    label{display:block;font-size:12px;color:#b8c6d7;margin:10px 0 5px}input,select{width:100%;padding:12px;border:1px solid #34445a;border-radius:11px;background:#0e1622;color:var(--text);font:inherit}input:focus,select:focus{outline:2px solid #43d6a077;border-color:var(--green)}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.notice{padding:12px;border-radius:12px;background:#30291d;border:1px solid #5b4829;color:#ffdfa8;font-size:12px;line-height:1.5}.success{padding:12px;border-radius:12px;background:#14352d;border:1px solid #285e4c;color:#a4f0d0;font-size:12px;line-height:1.5}.hidden{display:none!important}.item{background:#101925;border:1px solid #29384c;border-radius:13px;padding:12px;margin:8px 0}.itemtop{display:flex;justify-content:space-between;gap:8px}.item p{margin:5px 0;color:var(--muted);font-size:12px}.checkline{display:flex;align-items:center;gap:8px}.checkline input{width:auto}.foot{color:#8294aa;font-size:11px;line-height:1.5;text-align:center;margin:24px 8px}.empty{color:var(--muted);text-align:center;padding:18px;font-size:13px}
+    @media(min-width:620px){.grid{grid-template-columns:repeat(4,1fr)}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top"><div><div class="brand">◈ MI DINERO</div><div class="sub">Tu dinero, organizado quincena a quincena</div></div><span class="pill">MODO PRIVADO</span></header>
+  <section class="hero">
+    <div class="eyebrow">Saldo registrado disponible</div>
+    <div class="balance" id="available">$0,00</div>
+    <div class="muted small" id="monthLabel"></div>
+    <div class="bar"><span id="barNeeds" style="background:var(--green);width:50%"></span><span id="barWants" style="background:var(--yellow);width:30%"></span><span id="barSave" style="background:var(--blue);width:20%"></span></div>
+    <div class="small muted">Ingresos confirmados: <b id="incomeTotal">$0,00</b> · Gastos registrados: <b id="spentTotal">$0,00</b></div>
+  </section>
+  <div class="grid">
+    <div class="card"><h3 class="green">50% Necesidades</h3><div class="amount" id="needsBudget">$120,50</div><div class="small muted">Compromisos y gastos necesarios</div></div>
+    <div class="card"><h3 class="yellow">30% Gustos</h3><div class="amount" id="wantsBudget">$72,30</div><div class="small muted">Flexible: tú decides</div></div>
+    <div class="card"><h3 class="blue">20% Ahorro obligatorio</h3><div class="amount" id="saveBudget">$48,20</div><div class="small muted">Meta mensual</div></div>
+    <div class="card"><h3>Compromisos</h3><div class="amount" id="commitments">$93,00</div><div class="small muted">Teléfono, aire e internet</div></div>
+  </div>
+
+  <nav class="tabs">
+    <button class="active" data-tab="home">Resumen</button><button data-tab="income">Ingresos</button><button data-tab="payments">Pagos</button><button data-tab="records">Movimientos</button>
+  </nav>
+
+  <main id="tab-home">
+    <section class="section">
+      <div class="section-head"><h2>Tu distribución mensual</h2><span class="tag">50 / 30 / 20</span></div>
+      <div class="card">
+        <div class="row"><span>Necesidades (50%)</span><strong id="needsValue">$120,50</strong></div>
+        <div class="row"><span>Compromisos reservados</span><strong id="reservedValue">$93,00</strong></div>
+        <div class="row"><span>Resto para transporte / universidad / otras necesidades</span><strong class="green" id="needsLeft">$27,50</strong></div>
+        <div class="row"><span>Gustos (30%, flexible)</span><strong id="wantsValue">$72,30</strong></div>
+        <div class="row"><span>Ahorro obligatorio (20%)</span><strong class="blue" id="saveValue">$48,20</strong></div>
+      </div>
+    </section>
+    <section class="section">
+      <div class="section-head"><h2>Próximos recordatorios</h2><span class="tag warn" id="dueCount">0 pendientes</span></div>
+      <div id="reminders"></div>
+    </section>
+    <section class="section">
+      <div class="section-head"><h2>Confirmar ahorro</h2><span class="tag">20% protegido</span></div>
+      <div class="card">
+        <div class="small muted">Meta de ahorro del mes</div><div class="amount blue" id="savedThisMonth">$0,00 / $48,20</div>
+        <div class="bar"><span id="savingProgress" style="background:var(--blue);width:0%"></span></div>
+        <div class="small muted">Registra cuando hayas separado físicamente el dinero para tu alcancía.</div>
+        <div class="actions" style="margin-top:12px"><button class="primary" id="addSaving">Confirmar ahorro de esta quincena</button></div>
+      </div>
+    </section>
+    <section class="section">
+      <div class="section-head"><h2>Confirmar ingreso pendiente</h2></div>
+      <div class="card">
+        <p class="small muted">La aplicación no contará un sueldo hasta que confirmes que ya lo recibiste.</p>
+        <div id="pendingIncome"></div>
+        <button class="ghost" id="quickIncome">Registrar sueldo recibido</button>
+      </div>
+    </section>
+  </main>
+
+  <main id="tab-income" class="hidden">
+    <section class="section">
+      <div class="section-head"><h2>Registrar sueldo recibido</h2><span class="tag">Fecha real</span></div>
+      <div class="card">
+        <div class="formgrid">
+          <div><label>Fecha en que cobraste</label><input id="incomeDate" type="date"></div>
+          <div><label>Quincena</label><select id="incomePeriod"><option value="1">Primera (15–20 aprox.)</option><option value="2">Segunda (30–5 aprox.)</option><option value="extra">Ingreso extra</option></select></div>
+        </div>
+        <label>Valor recibido ($)</label><input id="incomeAmount" type="number" min="0" step="0.01" value="120.50">
+        <label>Nota (opcional)</label><input id="incomeNote" placeholder="Ej. me pagaron el 18">
+        <button class="primary" id="saveIncome" style="width:100%;margin-top:14px">Confirmar que recibí el sueldo</button>
+      </div>
+      <div class="section-head" style="margin-top:18px"><h2>Historial de ingresos</h2></div><div id="incomeHistory"></div>
+    </section>
+  </main>
+
+  <main id="tab-payments" class="hidden">
+    <section class="section">
+      <div class="section-head"><h2>Compromisos y vencimientos</h2><span class="tag">Cuotas</span></div>
+      <div class="notice">Fechas y cuotas iniciales cargadas según lo que explicaste. Puedes editar los datos si cambia una fecha o importe. El pago se marca manualmente; la app no mueve dinero de tu cuenta.</div>
+      <div id="paymentList"></div>
+      <div class="card" style="margin-top:12px">
+        <h3>Registrar otro gasto fijo</h3>
+        <div class="formgrid">
+          <div><label>Nombre</label><input id="newPayName" placeholder="Ej. transporte"></div>
+          <div><label>Valor ($)</label><input id="newPayAmount" type="number" min="0" step="0.01" placeholder="0.00"></div>
+        </div>
+        <div class="formgrid">
+          <div><label>Día de vencimiento</label><input id="newPayDay" type="number" min="1" max="31" placeholder="10"></div>
+          <div><label>Tipo</label><select id="newPayType"><option value="monthly">Permanente</option><option value="installment">Temporal</option></select></div>
+        </div>
+        <button class="ghost" id="addPayment" style="width:100%;margin-top:12px">Agregar compromiso</button>
+      </div>
+    </section>
+  </main>
+
+  <main id="tab-records" class="hidden">
+    <section class="section">
+      <div class="section-head"><h2>Registrar movimiento</h2><span class="tag">Manual</span></div>
+      <div class="card">
+        <div class="formgrid">
+          <div><label>Tipo</label><select id="recordType"><option value="expense">Gasto</option><option value="saving">Ahorro adicional</option></select></div>
+          <div><label>Categoría</label><select id="recordCategory"><option value="needs">Necesidades (50%)</option><option value="wants">Gustos (30%)</option><option value="saving">Ahorro (20%)</option></select></div>
+        </div>
+        <label>Descripción</label><input id="recordDesc" placeholder="Ej. bus, almuerzo, cuaderno">
+        <div class="formgrid">
+          <div><label>Valor ($)</label><input id="recordAmount" type="number" min="0" step="0.01" placeholder="0.00"></div>
+          <div><label>Fecha</label><input id="recordDate" type="date"></div>
+        </div>
+        <button class="primary" id="saveRecord" style="width:100%;margin-top:14px">Guardar movimiento</button>
+      </div>
+      <div class="section-head" style="margin-top:18px"><h2>Historial</h2></div><div id="recordHistory"></div>
+    </section>
+  </main>
+
+  <div class="foot">Tus datos se guardan localmente en este navegador. No se envían a un servidor. Exporta una copia de seguridad periódicamente. Las alertas de vencimiento se muestran al abrir la app; las notificaciones push de iOS requieren configuración adicional.</div>
+  <div class="actions"><button class="ghost" id="exportData">Exportar respaldo</button><button class="ghost" id="importData">Importar respaldo</button><input class="hidden" type="file" id="importFile" accept="application/json"></div>
+</div>
+<script>
+const KEY='miDineroData_v1';
+const money=n=>new Intl.NumberFormat('es-EC',{style:'currency',currency:'USD'}).format(Number(n||0));
+const todayISO=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
+const monthKey=d=>String(d||todayISO()).slice(0,7);
+const defaultData=()=>({
+ incomes:[], records:[], savings:[],
+ payments:[
+  {id:'phone',name:'Teléfono',amount:40,day:30,dueRule:'monthEnd',nextDue:'2026-11-30',type:'installment',remaining:4,period:1,active:true,note:'Cuotas de noviembre 2026 a febrero 2027'},
+  {id:'air',name:'Aire acondicionado',amount:40,day:15,dueRule:'fixedDay',nextDue:'2026-12-15',type:'installment',remaining:3,period:2,active:true,note:'Cuotas de diciembre 2026 a febrero 2027; noviembre ya pagado'},
+  {id:'internet',name:'Internet',amount:13,day:10,dueRule:'fixedDay',nextDue:'2026-12-10',type:'monthly',remaining:null,period:0,active:true,note:'Permanente; reservar $6,50 por quincena'}
+ ],
+ dismissed:[], savingsPromptMonth:''
+});
+let data=load();
+function load(){try{return {...defaultData(),...JSON.parse(localStorage.getItem(KEY)||'{}')}}catch(e){return defaultData()}}
+function save(){localStorage.setItem(KEY,JSON.stringify(data));render()}
+function totalIncome(){return data.incomes.filter(x=>monthKey(x.date)===monthKey()).reduce((s,x)=>s+x.amount,0)}
+function totalSpent(){return data.records.filter(x=>monthKey(x.date)===monthKey()&&x.type==='expense').reduce((s,x)=>s+x.amount,0)}
+function currentSaving(){return data.savings.filter(x=>monthKey(x.date)===monthKey()).reduce((s,x)=>s+x.amount,0)}
+function monthlyBase(){return 241}
+function activeCommitments(){return data.payments.filter(p=>p.active).reduce((s,p)=>s+(p.id==='internet'?13:(p.remaining===null?p.amount:p.remaining>0?p.amount:0)),0)}
+function dateForThisMonth(day){let d=new Date();let y=d.getFullYear(),m=d.getMonth();let last=new Date(y,m+1,0).getDate();return new Date(y,m,Math.min(day,last))}
+function daysUntil(d){let a=new Date();a.setHours(0,0,0,0);let b=new Date(d);b.setHours(0,0,0,0);return Math.round((b-a)/86400000)}
+function dueDateFor(p){if(p.nextDue)return new Date(p.nextDue+'T12:00:00');return dateForThisMonth(p.day)}
+function nextMonthlyDue(p, paidDate){let d=new Date((paidDate||todayISO())+'T12:00:00');let next=new Date(d.getFullYear(),d.getMonth()+1,1);let last=new Date(next.getFullYear(),next.getMonth()+1,0).getDate();let day=p.dueRule==='monthEnd'?last:Math.min(p.day,last);return `${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`}
+function render(){
+ const base=monthlyBase(),needs=base*.5,wants=base*.3,saveAmt=base*.2;
+ const income=totalIncome(),spent=totalSpent(),saved=currentSaving();
+ document.getElementById('available').textContent=money(income-spent-saved);
+ document.getElementById('monthLabel').textContent=new Date().toLocaleDateString('es-EC',{month:'long',year:'numeric'});
+ document.getElementById('incomeTotal').textContent=money(income);document.getElementById('spentTotal').textContent=money(spent);
+ document.getElementById('needsBudget').textContent=money(needs);document.getElementById('wantsBudget').textContent=money(wants);document.getElementById('saveBudget').textContent=money(saveAmt);
+ document.getElementById('commitments').textContent=money(activeCommitments());
+ document.getElementById('needsValue').textContent=money(needs);document.getElementById('reservedValue').textContent=money(93);document.getElementById('needsLeft').textContent=money(needs-93);
+ document.getElementById('wantsValue').textContent=money(wants);document.getElementById('saveValue').textContent=money(saveAmt);
+ document.getElementById('savedThisMonth').textContent=`${money(saved)} / ${money(saveAmt)}`;
+ document.getElementById('savingProgress').style.width=Math.min(100,saved/saveAmt*100)+'%';
+ document.getElementById('barNeeds').style.width='50%';document.getElementById('barWants').style.width='30%';document.getElementById('barSave').style.width='20%';
+ renderReminders();renderPayments();renderIncome();renderRecords();renderPending();
+}
+function renderReminders(){
+ let list=data.payments.filter(p=>p.active).map(p=>({p,d:dueDateFor(p)})).sort((a,b)=>a.d-b.d);
+ let html='';let count=0;
+ list.forEach(({p,d})=>{let left=daysUntil(d);let label=left<0?`Vencido hace ${Math.abs(left)} día(s)`:left===0?'Vence hoy':left===1?'Falta 1 día':`Faltan ${left} días`;let already=data.dismissed.includes(p.id+':'+monthKey());if(!already){count++;html+=`<div class="item"><div class="itemtop"><b>${esc(p.name)}</b><strong>${money(p.amount)}</strong></div><p>${esc(label)} · fecha límite día ${p.day}</p><div class="actions"><button class="primary" onclick="markPaid('${p.id}')">Ya pagué</button><button class="ghost" onclick="snooze('${p.id}')">Recordar después</button></div></div>`}});
+ if(!html)html='<div class="empty">No tienes recordatorios pendientes para este mes.</div>';
+ document.getElementById('reminders').innerHTML=html;document.getElementById('dueCount').textContent=count+' pendientes';
+}
+function renderPayments(){
+ document.getElementById('paymentList').innerHTML=data.payments.map(p=>`<div class="item"><div class="itemtop"><b>${esc(p.name)}</b><span class="tag ${p.type==='monthly'?'ok':'warn'}">${p.type==='monthly'?'Permanente':`${p.remaining} cuotas restantes`}</span></div><p>${money(p.amount)} · vence el día ${p.day} · ${esc(p.note||'')}</p><div class="actions"><button class="primary" onclick="markPaid('${p.id}')">Registrar pago</button><button class="ghost" onclick="editPayment('${p.id}')">Editar</button>${p.id.startsWith('custom')?`<button class="danger" onclick="removePayment('${p.id}')">Eliminar</button>`:''}</div></div>`).join('')||'<div class="empty">No hay compromisos registrados.</div>';
+}
+function renderIncome(){
+ document.getElementById('incomeHistory').innerHTML=data.incomes.slice().reverse().map(x=>`<div class="item"><div class="itemtop"><b>${x.period==='1'?'Primera quincena':x.period==='2'?'Segunda quincena':'Ingreso extra'}</b><strong class="green">+${money(x.amount)}</strong></div><p>${x.date} · ${esc(x.note||'')}</p></div>`).join('')||'<div class="empty">Aún no has registrado ingresos.</div>';
+}
+function renderRecords(){
+ document.getElementById('recordHistory').innerHTML=data.records.slice().reverse().map(x=>`<div class="item"><div class="itemtop"><b>${esc(x.desc)}</b><strong>${x.type==='expense'?'-':'+'}${money(x.amount)}</strong></div><p>${x.date} · ${x.category==='needs'?'Necesidades':x.category==='wants'?'Gustos':'Ahorro'}</p></div>`).join('')||'<div class="empty">Aún no hay movimientos.</div>';
+}
+function renderPending(){
+ const el=document.getElementById('pendingIncome');
+ const month=data.incomes.filter(x=>monthKey(x.date)===monthKey()).length;
+ el.innerHTML=month>=2?'<div class="success">Ya registraste dos ingresos este mes. Si cobraste un valor diferente, puedes añadir otro registro.</div>':'<div class="notice">Tienes '+(2-month)+' ingreso(s) quincenal(es) por confirmar este mes. Si todavía no te pagan, no registres el ingreso; puedes volver cuando recibas el dinero.</div>';
+}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function markPaid(id){
+ const p=data.payments.find(x=>x.id===id);if(!p)return;
+ const date=prompt(`¿Qué día pagaste ${p.name}? (AAAA-MM-DD)`,todayISO());if(!date)return;
+ const amount=Number(prompt('¿Cuánto pagaste?',p.amount));if(!Number.isFinite(amount)||amount<0)return alert('Valor no válido.');
+ data.records.push({id:crypto.randomUUID(),type:'expense',category:'needs',desc:`Pago: ${p.name}`,amount,date});
+ if(p.type==='installment'&&p.remaining!==null){p.remaining=Math.max(0,p.remaining-1);if(p.remaining===0)p.active=false}
+ if(p.type==='monthly'){p.nextDue=nextMonthlyDue(p,date);data.dismissed=data.dismissed.filter(x=>!x.startsWith(id+':'));}else if(p.remaining>0){p.nextDue=nextMonthlyDue(p,date)}else{p.active=false}data.dismissed.push(id+':'+monthKey(date));save();alert(`Pago de ${p.name} registrado. ¡Buen trabajo!`);
+}
+function snooze(id){alert('Listo. El recordatorio seguirá visible cuando vuelvas a abrir la aplicación.');}
+function editPayment(id){let p=data.payments.find(x=>x.id===id);if(!p)return;let a=prompt('Valor mensual/cuota ($)',p.amount);if(a===null)return;let d=prompt('Día de vencimiento (1–31)',p.day);if(d===null)return;p.amount=Math.max(0,Number(a)||0);p.day=Math.min(31,Math.max(1,Number(d)||1));save()}
+function removePayment(id){if(confirm('¿Eliminar este compromiso?')){data.payments=data.payments.filter(p=>p.id!==id);save()}}
+document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));b.classList.add('active');['home','income','payments','records'].forEach(t=>document.getElementById('tab-'+t).classList.toggle('hidden',t!==b.dataset.tab))}));
+document.getElementById('saveIncome').onclick=()=>{let amount=Number(document.getElementById('incomeAmount').value),date=document.getElementById('incomeDate').value;if(!date||!Number.isFinite(amount)||amount<=0)return alert('Ingresa una fecha y un valor válido.');data.incomes.push({id:crypto.randomUUID(),amount,date,period:document.getElementById('incomePeriod').value,note:document.getElementById('incomeNote').value});document.getElementById('incomeNote').value='';save();alert('Ingreso confirmado. Se actualizaron tus totales.')};
+document.getElementById('quickIncome').onclick=()=>{document.querySelector('[data-tab="income"]').click();document.getElementById('incomeDate').value=todayISO()};
+document.getElementById('addSaving').onclick=()=>{let amount=Number(prompt('¿Cuánto separaste físicamente para tu alcancía? La meta obligatoria por quincena es $24,10. Si separaste menos, registra lo que guardaste y completa el faltante después.', '24.10'));if(!Number.isFinite(amount)||amount<=0)return;data.savings.push({id:crypto.randomUUID(),amount,date:todayISO()});save();alert('Ahorro registrado. Recuerda mantenerlo separado físicamente.')};
+document.getElementById('saveRecord').onclick=()=>{let amount=Number(document.getElementById('recordAmount').value),date=document.getElementById('recordDate').value,desc=document.getElementById('recordDesc').value.trim();if(!desc||!date||!Number.isFinite(amount)||amount<=0)return alert('Completa descripción, fecha y valor.');data.records.push({id:crypto.randomUUID(),type:document.getElementById('recordType').value,category:document.getElementById('recordCategory').value,desc,amount,date});document.getElementById('recordDesc').value='';document.getElementById('recordAmount').value='';save();alert('Movimiento guardado.')};
+document.getElementById('addPayment').onclick=()=>{let name=document.getElementById('newPayName').value.trim(),amount=Number(document.getElementById('newPayAmount').value),day=Number(document.getElementById('newPayDay').value),type=document.getElementById('newPayType').value;if(!name||amount<=0||day<1||day>31)return alert('Completa nombre, valor y día de vencimiento.');data.payments.push({id:'custom-'+crypto.randomUUID(),name,amount,day,type,remaining:type==='installment'?1:null,period:0,active:true,note:'Agregado por ti'});save();document.getElementById('newPayName').value='';document.getElementById('newPayAmount').value='';document.getElementById('newPayDay').value=''};
+document.getElementById('exportData').onclick=()=>{let blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='mi-dinero-respaldo.json';a.click();URL.revokeObjectURL(a.href)};
+document.getElementById('importData').onclick=()=>document.getElementById('importFile').click();
+document.getElementById('importFile').onchange=e=>{let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let x=JSON.parse(r.result);if(!x.incomes||!x.payments)throw 0;if(confirm('Esto reemplazará los datos actuales. ¿Continuar?')){data=x;save();alert('Respaldo importado.')}}catch(err){alert('El archivo no parece ser un respaldo válido.')}};r.readAsText(f)};
+document.getElementById('incomeDate').value=todayISO();document.getElementById('recordDate').value=todayISO();
+render();
+if('serviceWorker' in navigator && location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
+</script>
+</body></html>
