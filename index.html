@@ -31,7 +31,7 @@
     <div class="small muted">Ingresos confirmados: <b id="incomeTotal">$0,00</b> · Gastos registrados: <b id="spentTotal">$0,00</b></div>
   </section>
   <div class="grid">
-    <div class="card"><h3 class="green">50% Necesidades</h3><div class="amount" id="needsBudget">$120,50</div><div class="small muted">Compromisos y gastos necesarios</div></div>
+    <div class="card"><h3 class="green">50% Necesidades</h3><div class="amount" id="needsBudget">$120,50</div><div class="small muted">Pagos fijos y necesidades del día a día</div></div>
     <div class="card"><h3 class="yellow">30% Gustos</h3><div class="amount" id="wantsBudget">$72,30</div><div class="small muted">Flexible: tú decides</div></div>
     <div class="card"><h3 class="blue">20% Ahorro obligatorio</h3><div class="amount" id="saveBudget">$48,20</div><div class="small muted">Meta mensual</div></div>
     <div class="card"><h3>Compromisos</h3><div class="amount" id="commitments">$93,00</div><div class="small muted">Teléfono, aire e internet</div></div>
@@ -43,7 +43,7 @@
 
   <main id="tab-home">
     <section class="section">
-      <div class="section-head"><h2>Tu distribución mensual</h2><span class="tag">50 / 30 / 20</span></div>
+      <div class="section-head"><h2>Distribución de tus ingresos de este mes</h2><span class="tag">50 / 30 / 20</span></div>
       <div class="card">
         <div class="row"><span>Necesidades (50%)</span><strong id="needsValue">$120,50</strong></div>
         <div class="row"><span>Compromisos reservados</span><strong id="reservedValue">$93,00</strong></div>
@@ -51,6 +51,9 @@
         <div class="row"><span>Gustos (30%, flexible)</span><strong id="wantsValue">$72,30</strong></div>
         <div class="row"><span>Ahorro obligatorio (20%)</span><strong class="blue" id="saveValue">$48,20</strong></div>
       </div>
+    </section>
+    <section class="section" id="allocationHomeSection">
+      <div id="homeAllocation" class="card"></div>
     </section>
     <section class="section">
       <div class="section-head"><h2>Próximos recordatorios</h2><span class="tag warn" id="dueCount">0 pendientes</span></div>
@@ -81,12 +84,13 @@
       <div class="card">
         <div class="formgrid">
           <div><label>Fecha en que cobraste</label><input id="incomeDate" type="date"></div>
-          <div><label>Quincena</label><select id="incomePeriod"><option value="1">Primera (15–20 aprox.)</option><option value="2">Segunda (30–5 aprox.)</option><option value="extra">Ingreso extra</option></select></div>
+          <div><label>Quincena</label><select id="incomePeriod"><option value="1">Primera (15–20 aprox.)</option><option value="2">Segunda (30–5 aprox.)</option><option value="extra">Ingreso externo (fuera del sueldo)</option></select></div>
         </div>
         <label>Valor recibido ($)</label><input id="incomeAmount" type="number" min="0" step="0.01" value="120.50">
         <label>Nota (opcional)</label><input id="incomeNote" placeholder="Ej. me pagaron el 18">
         <button class="primary" id="saveIncome" style="width:100%;margin-top:14px">Confirmar que recibí el sueldo</button>
       </div>
+      <div id="lastAllocation" class="card" style="margin-top:12px"></div>
       <div class="section-head" style="margin-top:18px"><h2>Historial de ingresos</h2></div><div id="incomeHistory"></div>
     </section>
   </main>
@@ -97,16 +101,19 @@
       <div class="notice">Fechas y cuotas iniciales cargadas según lo que explicaste. Puedes editar los datos si cambia una fecha o importe. El pago se marca manualmente; la app no mueve dinero de tu cuenta.</div>
       <div id="paymentList"></div>
       <div class="card" style="margin-top:12px">
-        <h3>Registrar otro gasto fijo</h3>
+        <h3>➕ Añadir deuda o pago mensual</h3>
+        <p class="small muted">Ejemplo: una deuda de $5 cada mes. Se reservará la mitad ($2,50) de cada quincena dentro de Necesidades.</p>
+        <label>Nombre de la deuda</label><input id="newPayName" placeholder="Ej. compra de un artículo">
+        <label>Descripción (opcional)</label><input id="newPayNote" placeholder="Ej. cuota del mueble">
         <div class="formgrid">
-          <div><label>Nombre</label><input id="newPayName" placeholder="Ej. transporte"></div>
-          <div><label>Valor ($)</label><input id="newPayAmount" type="number" min="0" step="0.01" placeholder="0.00"></div>
+          <div><label>Valor mensual ($)</label><input id="newPayAmount" type="number" min="0.01" step="0.01" placeholder="5.00"></div>
+          <div><label>Primer vencimiento</label><input id="newPayStart" type="date"></div>
         </div>
         <div class="formgrid">
-          <div><label>Día de vencimiento</label><input id="newPayDay" type="number" min="1" max="31" placeholder="10"></div>
-          <div><label>Tipo</label><select id="newPayType"><option value="monthly">Permanente</option><option value="installment">Temporal</option></select></div>
+          <div><label>Tipo de pago</label><select id="newPayType"><option value="monthly">Mensual permanente</option><option value="installment">Deuda por cuotas</option></select></div>
+          <div><label>Número de cuotas</label><input id="newPayCount" type="number" min="1" step="1" value="6"></div>
         </div>
-        <button class="ghost" id="addPayment" style="width:100%;margin-top:12px">Agregar compromiso</button>
+        <button class="primary" id="addPayment" style="width:100%;margin-top:12px">Guardar deuda o pago</button>
       </div>
     </section>
   </main>
@@ -148,29 +155,45 @@ const defaultData=()=>({
  dismissed:[], savingsPromptMonth:''
 });
 let data=load();
-function load(){try{return {...defaultData(),...JSON.parse(localStorage.getItem(KEY)||'{}')}}catch(e){return defaultData()}}
+function load(){try{const x=JSON.parse(localStorage.getItem(KEY)||'{}');return {...defaultData(),...x, incomes:x.incomes||[],records:x.records||[],savings:x.savings||[],payments:x.payments||defaultData().payments,dismissed:x.dismissed||[]}}catch(e){return defaultData()}}
 function save(){localStorage.setItem(KEY,JSON.stringify(data));render()}
-function totalIncome(){return data.incomes.filter(x=>monthKey(x.date)===monthKey()).reduce((s,x)=>s+x.amount,0)}
-function totalSpent(){return data.records.filter(x=>monthKey(x.date)===monthKey()&&x.type==='expense').reduce((s,x)=>s+x.amount,0)}
-function currentSaving(){return data.savings.filter(x=>monthKey(x.date)===monthKey()).reduce((s,x)=>s+x.amount,0)}
-function monthlyBase(){return 241}
-function activeCommitments(){return data.payments.filter(p=>p.active).reduce((s,p)=>s+(p.id==='internet'?13:(p.remaining===null?p.amount:p.remaining>0?p.amount:0)),0)}
+function totalIncome(){return data.incomes.filter(x=>monthKey(x.date)===monthKey()).reduce((s,x)=>s+Number(x.amount||0),0)}
+function totalSpent(){return data.records.filter(x=>monthKey(x.date)===monthKey()&&x.type==='expense').reduce((s,x)=>s+Number(x.amount||0),0)}
+function currentSaving(){const confirmed=data.savings.filter(x=>monthKey(x.date)===monthKey()).reduce((s,x)=>s+Number(x.amount||0),0);const extra=data.records.filter(x=>monthKey(x.date)===monthKey()&&x.type==='saving').reduce((s,x)=>s+Number(x.amount||0),0);return confirmed+extra}
+function reservedThisMonth(){const xs=data.incomes.filter(x=>monthKey(x.date)===monthKey());return xs.length?xs.reduce((s,x)=>s+Number(splitIncome(x).reserve||0),0):activeCommitments()}
+function paidCommitmentsThisMonth(){return data.records.filter(x=>monthKey(x.date)===monthKey()&&x.type==='expense'&&String(x.desc||'').startsWith('Pago: ')).reduce((s,x)=>s+Number(x.amount||0),0)}
+function monthlyBase(){return totalIncome()||241}
+function activeCommitments(){return data.payments.filter(p=>p.active).reduce((s,p)=>s+Number(p.amount||0),0)}
 function dateForThisMonth(day){let d=new Date();let y=d.getFullYear(),m=d.getMonth();let last=new Date(y,m+1,0).getDate();return new Date(y,m,Math.min(day,last))}
 function daysUntil(d){let a=new Date();a.setHours(0,0,0,0);let b=new Date(d);b.setHours(0,0,0,0);return Math.round((b-a)/86400000)}
 function dueDateFor(p){if(p.nextDue)return new Date(p.nextDue+'T12:00:00');return dateForThisMonth(p.day)}
 function nextMonthlyDue(p, paidDate){let d=new Date((paidDate||todayISO())+'T12:00:00');let next=new Date(d.getFullYear(),d.getMonth()+1,1);let last=new Date(next.getFullYear(),next.getMonth()+1,0).getDate();let day=p.dueRule==='monthEnd'?last:Math.min(p.day,last);return `${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`}
+function commitmentReserve(period){return data.payments.filter(p=>p.active).reduce((sum,p)=>{
+ if(p.period===1)return sum+(period==='1'?Number(p.amount||0):0);
+ if(p.period===2)return sum+(period==='2'?Number(p.amount||0):0);
+ return sum+Number(p.amount||0)/2;
+ },0)}
+function splitIncome(x){
+ if(x.allocation)return x.allocation;
+ const amount=Number(x.amount||0),needs=amount*.5,wants=amount*.3,saving=amount*.2;
+ const reserve=x.period==='extra'?0:commitmentReserve(x.period);
+ return {amount,needs,wants,saving,reserve,needsFree:Math.max(0,needs-reserve),spendable:Math.max(0,needs-reserve)+wants,shortfall:Math.max(0,reserve-needs)};
+}
 function render(){
  const base=monthlyBase(),needs=base*.5,wants=base*.3,saveAmt=base*.2;
  const income=totalIncome(),spent=totalSpent(),saved=currentSaving();
- document.getElementById('available').textContent=money(income-spent-saved);
- document.getElementById('monthLabel').textContent=new Date().toLocaleDateString('es-EC',{month:'long',year:'numeric'});
+ const unpaidReserve=Math.max(0,reservedThisMonth()-paidCommitmentsThisMonth());
+ const savingStillToSeparate=Math.max(0,income*.2-saved);
+ document.getElementById('available').textContent=money(income-spent-saved-unpaidReserve-savingStillToSeparate);
+ document.getElementById('monthLabel').textContent=(income?'Presupuesto calculado sobre tus ingresos confirmados':'Presupuesto estimado sobre $241')+' · '+new Date().toLocaleDateString('es-EC',{month:'long',year:'numeric'});
  document.getElementById('incomeTotal').textContent=money(income);document.getElementById('spentTotal').textContent=money(spent);
  document.getElementById('needsBudget').textContent=money(needs);document.getElementById('wantsBudget').textContent=money(wants);document.getElementById('saveBudget').textContent=money(saveAmt);
  document.getElementById('commitments').textContent=money(activeCommitments());
- document.getElementById('needsValue').textContent=money(needs);document.getElementById('reservedValue').textContent=money(93);document.getElementById('needsLeft').textContent=money(needs-93);
+ const monthlyReserve=reservedThisMonth();
+ document.getElementById('needsValue').textContent=money(needs);document.getElementById('reservedValue').textContent=money(monthlyReserve);document.getElementById('needsLeft').textContent=money(Math.max(0,needs-monthlyReserve));
  document.getElementById('wantsValue').textContent=money(wants);document.getElementById('saveValue').textContent=money(saveAmt);
  document.getElementById('savedThisMonth').textContent=`${money(saved)} / ${money(saveAmt)}`;
- document.getElementById('savingProgress').style.width=Math.min(100,saved/saveAmt*100)+'%';
+ document.getElementById('savingProgress').style.width=Math.min(100,saveAmt?saved/saveAmt*100:0)+'%';
  document.getElementById('barNeeds').style.width='50%';document.getElementById('barWants').style.width='30%';document.getElementById('barSave').style.width='20%';
  renderReminders();renderPayments();renderIncome();renderRecords();renderPending();
 }
@@ -182,41 +205,47 @@ function renderReminders(){
  document.getElementById('reminders').innerHTML=html;document.getElementById('dueCount').textContent=count+' pendientes';
 }
 function renderPayments(){
- document.getElementById('paymentList').innerHTML=data.payments.map(p=>`<div class="item"><div class="itemtop"><b>${esc(p.name)}</b><span class="tag ${p.type==='monthly'?'ok':'warn'}">${p.type==='monthly'?'Permanente':`${p.remaining} cuotas restantes`}</span></div><p>${money(p.amount)} · vence el día ${p.day} · ${esc(p.note||'')}</p><div class="actions"><button class="primary" onclick="markPaid('${p.id}')">Registrar pago</button><button class="ghost" onclick="editPayment('${p.id}')">Editar</button>${p.id.startsWith('custom')?`<button class="danger" onclick="removePayment('${p.id}')">Eliminar</button>`:''}</div></div>`).join('')||'<div class="empty">No hay compromisos registrados.</div>';
+ document.getElementById('paymentList').innerHTML=data.payments.map(p=>`<div class="item"><div class="itemtop"><b>${esc(p.name)}</b><span class="tag ${p.type==='monthly'?'ok':'warn'}">${p.type==='monthly'?'Permanente':`${p.remaining} cuotas restantes`}</span></div><p>${money(p.amount)} al mes · vence el día ${p.day} · ${esc(p.note||'')}</p><div class="small muted">Reserva sugerida: ${p.period===1?'primera quincena':p.period===2?'segunda quincena':'mitad en cada quincena'}</div><div class="actions"><button class="primary" onclick="markPaid('${p.id}')">Registrar pago</button><button class="ghost" onclick="editPayment('${p.id}')">Editar</button>${p.id.startsWith('custom')?`<button class="danger" onclick="removePayment('${p.id}')">Eliminar</button>`:''}</div></div>`).join('')||'<div class="empty">No hay compromisos registrados.</div>'; 
 }
 function renderIncome(){
- document.getElementById('incomeHistory').innerHTML=data.incomes.slice().reverse().map(x=>`<div class="item"><div class="itemtop"><b>${x.period==='1'?'Primera quincena':x.period==='2'?'Segunda quincena':'Ingreso extra'}</b><strong class="green">+${money(x.amount)}</strong></div><p>${x.date} · ${esc(x.note||'')}</p></div>`).join('')||'<div class="empty">Aún no has registrado ingresos.</div>';
+ const sorted=data.incomes.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+ document.getElementById('incomeHistory').innerHTML=sorted.map(x=>{const a=splitIncome(x);return `<div class="item"><div class="itemtop"><b>${x.period==='1'?'Primera quincena':x.period==='2'?'Segunda quincena':'Ingreso externo / extra'}</b><strong class="green">+${money(x.amount)}</strong></div><p>${x.date} · ${esc(x.note||'')}</p><div class="row"><span>Necesidades (50%)</span><strong>${money(a.needs)}</strong></div><div class="row"><span>Gustos (30%)</span><strong>${money(a.wants)}</strong></div><div class="row"><span>Ahorro (20%)</span><strong>${money(a.saving)}</strong></div><div class="row"><span>Reservar para deudas</span><strong>${money(a.reserve)}</strong></div><div class="row"><span>Disponible para usar (necesidades libres + gustos)</span><strong class="green">${money(a.spendable)}</strong></div>${a.shortfall?`<p class="red">Atención: las reservas superan el 50% de esta quincena por ${money(a.shortfall)}.</p>`:''}</div>`}).join('')||'<div class="empty">Aún no has registrado ingresos.</div>';
+ const last=sorted[0],box=document.getElementById('lastAllocation'),home=document.getElementById('homeAllocation');
+ if(!last){const empty='<b>Tu distribución 50/30/20 aparecerá aquí</b><p class="small muted">Cuando confirmes un ingreso, verás cuánto va a necesidades, gustos, ahorro y deudas.</p>';box.innerHTML=empty;home.innerHTML=empty;return;}
+ const a=splitIncome(last);const allocationHtml=`<div class="section-head"><h3>Así se repartió tu último ingreso</h3><span class="tag ok">${money(last.amount)}</span></div><div class="row"><span>Necesidades (50%)</span><strong>${money(a.needs)}</strong></div><div class="row"><span>Gustos (30%) · libre para gastar</span><strong class="yellow">${money(a.wants)}</strong></div><div class="row"><span>Ahorro obligatorio (20%)</span><strong class="blue">${money(a.saving)}</strong></div><div class="row"><span>Reservar para pagos/deudas</span><strong>${money(a.reserve)}</strong></div><div class="row"><span>Necesidades libres después de reservar</span><strong>${money(a.needsFree)}</strong></div><div class="success" style="margin-top:10px">Total que puedes usar sin tocar el ahorro: <b>${money(a.spendable)}</b>. Separa el ahorro de ${money(a.saving)} y reserva ${money(a.reserve)} para tus compromisos.</div>${a.shortfall?`<div class="notice" style="margin-top:8px">Tus deudas requieren ${money(a.shortfall)} más de lo disponible en el 50% de esta quincena. Revisa las reservas.</div>`:''}`;
+ box.innerHTML=allocationHtml;home.innerHTML=allocationHtml;
 }
 function renderRecords(){
- document.getElementById('recordHistory').innerHTML=data.records.slice().reverse().map(x=>`<div class="item"><div class="itemtop"><b>${esc(x.desc)}</b><strong>${x.type==='expense'?'-':'+'}${money(x.amount)}</strong></div><p>${x.date} · ${x.category==='needs'?'Necesidades':x.category==='wants'?'Gustos':'Ahorro'}</p></div>`).join('')||'<div class="empty">Aún no hay movimientos.</div>';
+ document.getElementById('recordHistory').innerHTML=data.records.slice().reverse().map(x=>`<div class="item"><div class="itemtop"><b>${esc(x.desc)}</b><strong>${x.type==='expense'||x.type==='saving'?'-':'+'}${money(x.amount)}</strong></div><p>${x.date} · ${x.type==='saving'?'Ahorro':x.category==='needs'?'Necesidades':x.category==='wants'?'Gustos':'Ahorro'}</p></div>`).join('')||'<div class="empty">Aún no hay movimientos.</div>';
 }
 function renderPending(){
  const el=document.getElementById('pendingIncome');
- const month=data.incomes.filter(x=>monthKey(x.date)===monthKey()).length;
+ const month=data.incomes.filter(x=>monthKey(x.date)===monthKey()&&x.period!=='extra').length;
  el.innerHTML=month>=2?'<div class="success">Ya registraste dos ingresos este mes. Si cobraste un valor diferente, puedes añadir otro registro.</div>':'<div class="notice">Tienes '+(2-month)+' ingreso(s) quincenal(es) por confirmar este mes. Si todavía no te pagan, no registres el ingreso; puedes volver cuando recibas el dinero.</div>';
 }
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function markPaid(id){
  const p=data.payments.find(x=>x.id===id);if(!p)return;
  const date=prompt(`¿Qué día pagaste ${p.name}? (AAAA-MM-DD)`,todayISO());if(!date)return;
- const amount=Number(prompt('¿Cuánto pagaste?',p.amount));if(!Number.isFinite(amount)||amount<0)return alert('Valor no válido.');
+ const amount=Number(prompt('¿Cuánto pagaste?',p.amount));if(!Number.isFinite(amount)||amount<=0)return alert('Valor no válido.');
  data.records.push({id:crypto.randomUUID(),type:'expense',category:'needs',desc:`Pago: ${p.name}`,amount,date});
- if(p.type==='installment'&&p.remaining!==null){p.remaining=Math.max(0,p.remaining-1);if(p.remaining===0)p.active=false}
- if(p.type==='monthly'){p.nextDue=nextMonthlyDue(p,date);data.dismissed=data.dismissed.filter(x=>!x.startsWith(id+':'));}else if(p.remaining>0){p.nextDue=nextMonthlyDue(p,date)}else{p.active=false}data.dismissed.push(id+':'+monthKey(date));save();alert(`Pago de ${p.name} registrado. ¡Buen trabajo!`);
+ if(p.type==='installment'&&p.remaining!==null){p.remaining=Math.max(0,Number(p.remaining)-1);if(p.remaining===0)p.active=false}
+ if(p.active){p.nextDue=nextMonthlyDue(p,date)}
+ data.dismissed=data.dismissed.filter(x=>!x.startsWith(id+':'));data.dismissed.push(id+':'+monthKey(date));save();alert(`Pago de ${p.name} registrado. ¡Buen trabajo!`);
 }
 function snooze(id){alert('Listo. El recordatorio seguirá visible cuando vuelvas a abrir la aplicación.');}
 function editPayment(id){let p=data.payments.find(x=>x.id===id);if(!p)return;let a=prompt('Valor mensual/cuota ($)',p.amount);if(a===null)return;let d=prompt('Día de vencimiento (1–31)',p.day);if(d===null)return;p.amount=Math.max(0,Number(a)||0);p.day=Math.min(31,Math.max(1,Number(d)||1));save()}
 function removePayment(id){if(confirm('¿Eliminar este compromiso?')){data.payments=data.payments.filter(p=>p.id!==id);save()}}
 document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));b.classList.add('active');['home','income','payments','records'].forEach(t=>document.getElementById('tab-'+t).classList.toggle('hidden',t!==b.dataset.tab))}));
-document.getElementById('saveIncome').onclick=()=>{let amount=Number(document.getElementById('incomeAmount').value),date=document.getElementById('incomeDate').value;if(!date||!Number.isFinite(amount)||amount<=0)return alert('Ingresa una fecha y un valor válido.');data.incomes.push({id:crypto.randomUUID(),amount,date,period:document.getElementById('incomePeriod').value,note:document.getElementById('incomeNote').value});document.getElementById('incomeNote').value='';save();alert('Ingreso confirmado. Se actualizaron tus totales.')};
+document.getElementById('saveIncome').onclick=()=>{let amount=Number(document.getElementById('incomeAmount').value),date=document.getElementById('incomeDate').value,period=document.getElementById('incomePeriod').value;if(!date||!Number.isFinite(amount)||amount<=0)return alert('Ingresa una fecha y un valor válido.');const x={id:crypto.randomUUID(),amount,date,period,note:document.getElementById('incomeNote').value};const needs=amount*.5,wants=amount*.3,saving=amount*.2,reserve=period==='extra'?0:commitmentReserve(period);x.allocation={amount,needs,wants,saving,reserve,needsFree:Math.max(0,needs-reserve),spendable:Math.max(0,needs-reserve)+wants,shortfall:Math.max(0,reserve-needs)};data.incomes.push(x);document.getElementById('incomeNote').value='';save();document.querySelector('[data-tab="income"]').click();const a=splitIncome(x);alert(`Ingreso confirmado: ${money(amount)}\n\nNecesidades (50%): ${money(a.needs)}\nGustos (30%): ${money(a.wants)}\nAhorro obligatorio (20%): ${money(a.saving)}\nReserva para deudas: ${money(a.reserve)}\n\nDisponible para usar sin tocar el ahorro: ${money(a.spendable)}`)};
 document.getElementById('quickIncome').onclick=()=>{document.querySelector('[data-tab="income"]').click();document.getElementById('incomeDate').value=todayISO()};
-document.getElementById('addSaving').onclick=()=>{let amount=Number(prompt('¿Cuánto separaste físicamente para tu alcancía? La meta obligatoria por quincena es $24,10. Si separaste menos, registra lo que guardaste y completa el faltante después.', '24.10'));if(!Number.isFinite(amount)||amount<=0)return;data.savings.push({id:crypto.randomUUID(),amount,date:todayISO()});save();alert('Ahorro registrado. Recuerda mantenerlo separado físicamente.')};
+document.getElementById('addSaving').onclick=()=>{let amount=Number(prompt('¿Cuánto separaste físicamente para tu alcancía? La meta es el 20% de cada ingreso recibido.'));if(!Number.isFinite(amount)||amount<=0)return;data.savings.push({id:crypto.randomUUID(),amount,date:todayISO()});save();alert('Ahorro registrado. Recuerda mantenerlo separado físicamente.')};
 document.getElementById('saveRecord').onclick=()=>{let amount=Number(document.getElementById('recordAmount').value),date=document.getElementById('recordDate').value,desc=document.getElementById('recordDesc').value.trim();if(!desc||!date||!Number.isFinite(amount)||amount<=0)return alert('Completa descripción, fecha y valor.');data.records.push({id:crypto.randomUUID(),type:document.getElementById('recordType').value,category:document.getElementById('recordCategory').value,desc,amount,date});document.getElementById('recordDesc').value='';document.getElementById('recordAmount').value='';save();alert('Movimiento guardado.')};
-document.getElementById('addPayment').onclick=()=>{let name=document.getElementById('newPayName').value.trim(),amount=Number(document.getElementById('newPayAmount').value),day=Number(document.getElementById('newPayDay').value),type=document.getElementById('newPayType').value;if(!name||amount<=0||day<1||day>31)return alert('Completa nombre, valor y día de vencimiento.');data.payments.push({id:'custom-'+crypto.randomUUID(),name,amount,day,type,remaining:type==='installment'?1:null,period:0,active:true,note:'Agregado por ti'});save();document.getElementById('newPayName').value='';document.getElementById('newPayAmount').value='';document.getElementById('newPayDay').value=''};
+document.getElementById('addPayment').onclick=()=>{let name=document.getElementById('newPayName').value.trim(),note=document.getElementById('newPayNote').value.trim(),amount=Number(document.getElementById('newPayAmount').value),type=document.getElementById('newPayType').value,count=Number(document.getElementById('newPayCount').value),start=document.getElementById('newPayStart').value;if(!name||amount<=0||!start||(type==='installment'&&(!Number.isInteger(count)||count<1)))return alert('Completa nombre, valor, primer vencimiento y número de cuotas si corresponde.');const due=new Date(start+'T12:00:00');const day=due.getDate();const nextDue=start;data.payments.push({id:'custom-'+crypto.randomUUID(),name,amount,day,type,remaining:type==='installment'?count:null,period:0,active:true,note:note||'Agregado por ti',nextDue,dueRule:'fixedDay'});save();['newPayName','newPayNote','newPayAmount'].forEach(id=>document.getElementById(id).value='');document.getElementById('newPayStart').value=todayISO();alert(`Se agregó ${name}. Se reservarán ${money(amount/2)} de cada quincena para cubrir ${money(amount)} al mes.`)};
 document.getElementById('exportData').onclick=()=>{let blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='mi-dinero-respaldo.json';a.click();URL.revokeObjectURL(a.href)};
 document.getElementById('importData').onclick=()=>document.getElementById('importFile').click();
 document.getElementById('importFile').onchange=e=>{let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let x=JSON.parse(r.result);if(!x.incomes||!x.payments)throw 0;if(confirm('Esto reemplazará los datos actuales. ¿Continuar?')){data=x;save();alert('Respaldo importado.')}}catch(err){alert('El archivo no parece ser un respaldo válido.')}};r.readAsText(f)};
-document.getElementById('incomeDate').value=todayISO();document.getElementById('recordDate').value=todayISO();
+document.getElementById('incomeDate').value=todayISO();document.getElementById('recordDate').value=todayISO();document.getElementById('newPayStart').value=todayISO();
 render();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
 </script>
