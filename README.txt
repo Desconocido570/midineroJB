@@ -40,3 +40,13 @@ Las deudas nuevas se añaden a esas reservas y la aplicación muestra si las res
 Los datos continúan guardándose localmente en el navegador del iPhone; esta actualización no los envía a Supabase ni a otro servidor. Se conserva la misma clave de almacenamiento local para que los datos existentes permanezcan en el mismo navegador y dominio. Antes de actualizar, exporta un respaldo desde la aplicación por precaución.
 
 La app no mueve dinero ni verifica depósitos bancarios. Debes confirmar manualmente ingresos, pagos y ahorros. Las alertas se muestran al abrir la app; las notificaciones push de iOS requieren una configuración adicional.
+
+
+NOVEDADES DE CONTROL DE GASTOS
+- Registra cada gasto y clasifícalo en Necesidades (50%) o Gustos (30%).
+- El saldo de cada categoría se actualiza al instante; los gastos no se descuentan del ahorro obligatorio.
+- Puedes registrar dinero separado para ahorro y revisar cuánto falta para la meta del 20%.
+- La pantalla Resumen muestra necesidades disponibles, gustos disponibles, ahorro por separar y dinero libre total.
+- Los gastos que superan el saldo de su categoría generan una advertencia y piden confirmación.
+- Puedes editar o eliminar movimientos; los saldos se recalculan automáticamente.
+- Los pagos de compromisos se contabilizan una sola vez dentro de Necesidades, incluso cuando ya se marcaron pagados.

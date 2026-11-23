@@ -56,6 +56,17 @@
       <div id="homeAllocation" class="card"></div>
     </section>
     <section class="section">
+      <div class="section-head"><h2>Control de tu dinero</h2><span class="tag">En tiempo real</span></div>
+      <div class="grid" style="margin-top:0">
+        <div class="card"><h3 class="green">Necesidades disponibles</h3><div class="amount" id="needsRemaining">$0,00</div><div class="small muted" id="needsSpentLabel">Gastado: $0,00</div><div class="bar"><span id="needsProgress" style="background:var(--green);width:0%"></span></div></div>
+        <div class="card"><h3 class="yellow">Gustos disponibles</h3><div class="amount" id="wantsRemaining">$0,00</div><div class="small muted" id="wantsSpentLabel">Gastado: $0,00</div><div class="bar"><span id="wantsProgress" style="background:var(--yellow);width:0%"></span></div></div>
+        <div class="card"><h3 class="blue">Ahorro por separar</h3><div class="amount" id="savingRemaining">$0,00</div><div class="small muted" id="savingDoneLabel">Separado: $0,00</div><div class="bar"><span id="savingBudgetProgress" style="background:var(--blue);width:0%"></span></div></div>
+        <div class="card"><h3>Dinero libre total</h3><div class="amount" id="freeToSpend">$0,00</div><div class="small muted">Necesidades libres + gustos disponibles</div></div>
+      </div>
+      <div id="budgetAlerts"></div>
+      <button class="primary" style="width:100%;margin-top:8px" onclick="document.querySelector('[data-tab=records]').click();document.getElementById('recordType').value='expense';updateRecordForm()">＋ Registrar un gasto</button>
+    </section>
+    <section class="section">
       <div class="section-head"><h2>Próximos recordatorios</h2><span class="tag warn" id="dueCount">0 pendientes</span></div>
       <div id="reminders"></div>
     </section>
@@ -123,14 +134,15 @@
       <div class="section-head"><h2>Registrar movimiento</h2><span class="tag">Manual</span></div>
       <div class="card">
         <div class="formgrid">
-          <div><label>Tipo</label><select id="recordType"><option value="expense">Gasto</option><option value="saving">Ahorro adicional</option></select></div>
-          <div><label>Categoría</label><select id="recordCategory"><option value="needs">Necesidades (50%)</option><option value="wants">Gustos (30%)</option><option value="saving">Ahorro (20%)</option></select></div>
+          <div><label>Tipo de movimiento</label><select id="recordType"><option value="expense">Gasto</option><option value="saving">Dinero separado para ahorro</option></select></div>
+          <div><label>¿De qué categoría sale?</label><select id="recordCategory"><option value="wants">Gustos (30%)</option><option value="needs">Necesidades (50%)</option><option value="saving">Ahorro (20%)</option></select></div>
         </div>
-        <label>Descripción</label><input id="recordDesc" placeholder="Ej. bus, almuerzo, cuaderno">
+        <label>¿En qué gastaste o qué ahorraste?</label><input id="recordDesc" placeholder="Ej. $20 en tragos, pasaje, almuerzo, universidad">
         <div class="formgrid">
-          <div><label>Valor ($)</label><input id="recordAmount" type="number" min="0" step="0.01" placeholder="0.00"></div>
+          <div><label>Valor ($)</label><input id="recordAmount" type="number" min="0.01" step="0.01" placeholder="0.00"></div>
           <div><label>Fecha</label><input id="recordDate" type="date"></div>
         </div>
+        <div class="notice" id="recordImpact" style="margin-top:10px">Selecciona el tipo y la categoría para ver cómo afectará tu presupuesto.</div>
         <button class="primary" id="saveRecord" style="width:100%;margin-top:14px">Guardar movimiento</button>
       </div>
       <div class="section-head" style="margin-top:18px"><h2>Historial</h2></div><div id="recordHistory"></div>
@@ -174,28 +186,54 @@ function commitmentReserve(period){return data.payments.filter(p=>p.active).redu
  return sum+Number(p.amount||0)/2;
  },0)}
 function splitIncome(x){
- if(x.allocation)return x.allocation;
  const amount=Number(x.amount||0),needs=amount*.5,wants=amount*.3,saving=amount*.2;
  const reserve=x.period==='extra'?0:commitmentReserve(x.period);
  return {amount,needs,wants,saving,reserve,needsFree:Math.max(0,needs-reserve),spendable:Math.max(0,needs-reserve)+wants,shortfall:Math.max(0,reserve-needs)};
 }
+function categoryTotals(){
+ const month=monthKey();
+ const income=data.incomes.filter(x=>monthKey(x.date)===month).reduce((s,x)=>s+Number(x.amount||0),0);
+ const needsBudget=income*.5,wantsBudget=income*.3,savingBudget=income*.2;
+ const records=data.records.filter(x=>monthKey(x.date)===month);
+ const needsSpent=records.filter(x=>x.type==='expense'&&x.category==='needs'&&!String(x.desc||'').startsWith('Pago: ')).reduce((s,x)=>s+Number(x.amount||0),0);
+ const wantsSpent=records.filter(x=>x.type==='expense'&&x.category==='wants').reduce((s,x)=>s+Number(x.amount||0),0);
+ const paid=paidCommitmentsThisMonth(),reserve=data.incomes.some(x=>monthKey(x.date)===month)?reservedThisMonth():0;
+ const needsObligations=Math.max(paid,reserve);
+ const saved=currentSaving();
+ return {income,needsBudget,wantsBudget,savingBudget,needsSpent,wantsSpent,paid,reserve,needsObligations,saved,needsLeft:needsBudget-needsObligations-needsSpent,wantsLeft:wantsBudget-wantsSpent,savingLeft:savingBudget-saved};
+}
 function render(){
  const base=monthlyBase(),needs=base*.5,wants=base*.3,saveAmt=base*.2;
- const income=totalIncome(),spent=totalSpent(),saved=currentSaving();
- const unpaidReserve=Math.max(0,reservedThisMonth()-paidCommitmentsThisMonth());
- const savingStillToSeparate=Math.max(0,income*.2-saved);
- document.getElementById('available').textContent=money(income-spent-saved-unpaidReserve-savingStillToSeparate);
- document.getElementById('monthLabel').textContent=(income?'Presupuesto calculado sobre tus ingresos confirmados':'Presupuesto estimado sobre $241')+' · '+new Date().toLocaleDateString('es-EC',{month:'long',year:'numeric'});
+ const income=totalIncome(),spent=totalSpent(),saved=currentSaving(),t=categoryTotals();
+ const available=t.needsLeft+t.wantsLeft;
+ document.getElementById('available').textContent=money(available);
+ document.getElementById('monthLabel').textContent=(income?'Presupuesto calculado sobre tus ingresos confirmados':'Presupuesto estimado sobre $241; disponible real $0 hasta registrar ingresos')+' · '+new Date().toLocaleDateString('es-EC',{month:'long',year:'numeric'});
  document.getElementById('incomeTotal').textContent=money(income);document.getElementById('spentTotal').textContent=money(spent);
  document.getElementById('needsBudget').textContent=money(needs);document.getElementById('wantsBudget').textContent=money(wants);document.getElementById('saveBudget').textContent=money(saveAmt);
  document.getElementById('commitments').textContent=money(activeCommitments());
  const monthlyReserve=reservedThisMonth();
- document.getElementById('needsValue').textContent=money(needs);document.getElementById('reservedValue').textContent=money(monthlyReserve);document.getElementById('needsLeft').textContent=money(Math.max(0,needs-monthlyReserve));
- document.getElementById('wantsValue').textContent=money(wants);document.getElementById('saveValue').textContent=money(saveAmt);
- document.getElementById('savedThisMonth').textContent=`${money(saved)} / ${money(saveAmt)}`;
- document.getElementById('savingProgress').style.width=Math.min(100,saveAmt?saved/saveAmt*100:0)+'%';
+ document.getElementById('needsValue').textContent=money(t.needsBudget);document.getElementById('reservedValue').textContent=money(monthlyReserve);document.getElementById('needsLeft').textContent=money(t.needsLeft);
+ document.getElementById('wantsValue').textContent=money(t.wantsBudget);document.getElementById('saveValue').textContent=money(t.savingBudget);
+ document.getElementById('savedThisMonth').textContent=`${money(saved)} / ${money(t.savingBudget)}`;
+ document.getElementById('savingProgress').style.width=Math.min(100,t.savingBudget?saved/t.savingBudget*100:0)+'%';
  document.getElementById('barNeeds').style.width='50%';document.getElementById('barWants').style.width='30%';document.getElementById('barSave').style.width='20%';
- renderReminders();renderPayments();renderIncome();renderRecords();renderPending();
+ document.getElementById('needsRemaining').textContent=money(t.needsLeft);
+ document.getElementById('wantsRemaining').textContent=money(t.wantsLeft);
+ document.getElementById('savingRemaining').textContent=money(t.savingLeft);
+ document.getElementById('freeToSpend').textContent=money(available);
+ document.getElementById('needsSpentLabel').textContent=`Compromisos: ${money(t.needsObligations)} · otros gastos: ${money(t.needsSpent)}`;
+ document.getElementById('wantsSpentLabel').textContent=`Gastado en gustos: ${money(t.wantsSpent)}`;
+ document.getElementById('savingDoneLabel').textContent=`Ya separado: ${money(t.saved)}`;
+ document.getElementById('needsProgress').style.width=Math.min(100,t.needsBudget?Math.max(0,(t.needsBudget-t.needsLeft)/t.needsBudget*100):0)+'%';
+ document.getElementById('wantsProgress').style.width=Math.min(100,t.wantsBudget?Math.max(0,t.wantsSpent/t.wantsBudget*100):0)+'%';
+ document.getElementById('savingBudgetProgress').style.width=Math.min(100,t.savingBudget?Math.max(0,t.saved/t.savingBudget*100):0)+'%';
+ let alerts=[];
+ if(!income)alerts.push('Aún no hay ingresos confirmados este mes. Los presupuestos son estimados; el dinero disponible real es $0.');
+ if(t.needsLeft<0)alerts.push(`Te excediste en Necesidades por ${money(Math.abs(t.needsLeft))}.`);
+ if(t.wantsLeft<0)alerts.push(`Te excediste en Gustos por ${money(Math.abs(t.wantsLeft))}. Puedes compensarlo reduciendo gastos posteriores.`);
+ if(t.savingLeft>0&&income)alerts.push(`Recuerda separar ${money(t.savingLeft)} para completar tu ahorro obligatorio del mes.`);
+ document.getElementById('budgetAlerts').innerHTML=alerts.map((a,i)=>`<div class="${i===0&&!income?'notice':'success'}" style="margin-top:8px">${esc(a)}</div>`).join('');
+ renderReminders();renderPayments();renderIncome();renderRecords();renderPending();updateRecordImpact();
 }
 function renderReminders(){
  let list=data.payments.filter(p=>p.active).map(p=>({p,d:dueDateFor(p)})).sort((a,b)=>a.d-b.d);
@@ -216,7 +254,40 @@ function renderIncome(){
  box.innerHTML=allocationHtml;home.innerHTML=allocationHtml;
 }
 function renderRecords(){
- document.getElementById('recordHistory').innerHTML=data.records.slice().reverse().map(x=>`<div class="item"><div class="itemtop"><b>${esc(x.desc)}</b><strong>${x.type==='expense'||x.type==='saving'?'-':'+'}${money(x.amount)}</strong></div><p>${x.date} · ${x.type==='saving'?'Ahorro':x.category==='needs'?'Necesidades':x.category==='wants'?'Gustos':'Ahorro'}</p></div>`).join('')||'<div class="empty">Aún no hay movimientos.</div>';
+ const names={needs:'Necesidades (50%)',wants:'Gustos (30%)',saving:'Ahorro (20%)'};
+ document.getElementById('recordHistory').innerHTML=data.records.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(x=>{
+  const kind=x.type==='saving'?'Ahorro separado':'Gasto';
+  const sign=x.type==='saving'?'+':'−';
+  return `<div class="item"><div class="itemtop"><b>${esc(x.desc)}</b><strong class="${x.type==='saving'?'blue':'red'}">${sign}${money(x.amount)}</strong></div><p>${esc(x.date)} · ${kind} · ${names[x.category]||'Sin categoría'}</p><div class="actions"><button class="ghost" onclick="editRecord('${x.id}')">Editar</button><button class="danger" onclick="deleteRecord('${x.id}')">Eliminar</button></div></div>`;
+ }).join('')||'<div class="empty">Aún no hay movimientos. Registra aquí cada gasto para que MI DINERO actualice tus saldos.</div>';
+}
+function editRecord(id){
+ const x=data.records.find(r=>r.id===id);if(!x)return;
+ const desc=prompt('Descripción del movimiento',x.desc);if(desc===null)return;
+ const amount=Number(prompt('Valor ($)',x.amount));if(!Number.isFinite(amount)||amount<=0)return alert('Valor no válido.');
+ const date=prompt('Fecha (AAAA-MM-DD)',x.date);if(!date)return;
+ const category=x.type==='saving'?'saving':prompt('Categoría: needs = Necesidades, wants = Gustos',x.category==='needs'?'needs':'wants');
+ if(!['needs','wants','saving'].includes(category)|| (x.type==='expense'&&category==='saving'))return alert('Categoría no válida.');
+ x.desc=desc.trim();x.amount=amount;x.date=date;x.category=category;
+ save();
+}
+function deleteRecord(id){if(!confirm('¿Eliminar este movimiento? El saldo de su categoría se recalculará.'))return;data.records=data.records.filter(x=>x.id!==id);save()}
+function updateRecordForm(){
+ const isSaving=document.getElementById('recordType').value==='saving';
+ const cat=document.getElementById('recordCategory');
+ if(isSaving){cat.value='saving';cat.disabled=true}else{cat.disabled=false;if(cat.value==='saving')cat.value='wants'}
+ updateRecordImpact();
+}
+function updateRecordImpact(){
+ const el=document.getElementById('recordImpact');if(!el)return;
+ const amount=Number(document.getElementById('recordAmount').value||0),type=document.getElementById('recordType').value,category=type==='saving'?'saving':document.getElementById('recordCategory').value,t=categoryTotals();
+ if(type==='saving'){el.textContent=`Este registro aumentará tu ahorro separado. Te faltaría ${money(Math.max(0,t.savingLeft-amount))} para completar la meta de este mes.`;return;}
+ const balance=category==='needs'?t.needsLeft:t.wantsLeft;
+ const label=category==='needs'?'Necesidades (50%)':'Gustos (30%)';
+ if(!amount){el.textContent=`Este gasto se descontará únicamente de ${label}. Saldo actual: ${money(balance)}.`;return;}
+ const after=balance-amount;
+ el.textContent=after>=0?`Este gasto se descontará de ${label}. Después de registrarlo te quedarán ${money(after)} en esa categoría.`:`Atención: este gasto supera el saldo de ${label} por ${money(Math.abs(after))}. El ahorro obligatorio no se tocará.`;
+ el.className=after<0?'notice':'success';el.style.marginTop='10px';
 }
 function renderPending(){
  const el=document.getElementById('pendingIncome');
@@ -240,12 +311,12 @@ document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',
 document.getElementById('saveIncome').onclick=()=>{let amount=Number(document.getElementById('incomeAmount').value),date=document.getElementById('incomeDate').value,period=document.getElementById('incomePeriod').value;if(!date||!Number.isFinite(amount)||amount<=0)return alert('Ingresa una fecha y un valor válido.');const x={id:crypto.randomUUID(),amount,date,period,note:document.getElementById('incomeNote').value};const needs=amount*.5,wants=amount*.3,saving=amount*.2,reserve=period==='extra'?0:commitmentReserve(period);x.allocation={amount,needs,wants,saving,reserve,needsFree:Math.max(0,needs-reserve),spendable:Math.max(0,needs-reserve)+wants,shortfall:Math.max(0,reserve-needs)};data.incomes.push(x);document.getElementById('incomeNote').value='';save();document.querySelector('[data-tab="income"]').click();const a=splitIncome(x);alert(`Ingreso confirmado: ${money(amount)}\n\nNecesidades (50%): ${money(a.needs)}\nGustos (30%): ${money(a.wants)}\nAhorro obligatorio (20%): ${money(a.saving)}\nReserva para deudas: ${money(a.reserve)}\n\nDisponible para usar sin tocar el ahorro: ${money(a.spendable)}`)};
 document.getElementById('quickIncome').onclick=()=>{document.querySelector('[data-tab="income"]').click();document.getElementById('incomeDate').value=todayISO()};
 document.getElementById('addSaving').onclick=()=>{let amount=Number(prompt('¿Cuánto separaste físicamente para tu alcancía? La meta es el 20% de cada ingreso recibido.'));if(!Number.isFinite(amount)||amount<=0)return;data.savings.push({id:crypto.randomUUID(),amount,date:todayISO()});save();alert('Ahorro registrado. Recuerda mantenerlo separado físicamente.')};
-document.getElementById('saveRecord').onclick=()=>{let amount=Number(document.getElementById('recordAmount').value),date=document.getElementById('recordDate').value,desc=document.getElementById('recordDesc').value.trim();if(!desc||!date||!Number.isFinite(amount)||amount<=0)return alert('Completa descripción, fecha y valor.');data.records.push({id:crypto.randomUUID(),type:document.getElementById('recordType').value,category:document.getElementById('recordCategory').value,desc,amount,date});document.getElementById('recordDesc').value='';document.getElementById('recordAmount').value='';save();alert('Movimiento guardado.')};
+document.getElementById('saveRecord').onclick=()=>{let type=document.getElementById('recordType').value,amount=Number(document.getElementById('recordAmount').value),date=document.getElementById('recordDate').value,desc=document.getElementById('recordDesc').value.trim(),category=type==='saving'?'saving':document.getElementById('recordCategory').value;if(!desc||!date||!Number.isFinite(amount)||amount<=0)return alert('Completa descripción, fecha y valor.');const before=categoryTotals(),balance=category==='needs'?before.needsLeft:category==='wants'?before.wantsLeft:before.savingLeft;if(type==='expense'&&amount>balance&& !confirm(`Este gasto supera el saldo de ${category==='needs'?'Necesidades':'Gustos'} por ${money(amount-balance)}. ¿Deseas registrarlo de todos modos?`))return;data.records.push({id:crypto.randomUUID(),type,category,desc,amount,date});document.getElementById('recordDesc').value='';document.getElementById('recordAmount').value='';save();alert(type==='saving'?`Ahorro registrado: ${money(amount)}.`:`Gasto registrado: ${money(amount)}. Tu saldo de ${category==='needs'?'Necesidades':'Gustos'} ya fue actualizado.`)};
 document.getElementById('addPayment').onclick=()=>{let name=document.getElementById('newPayName').value.trim(),note=document.getElementById('newPayNote').value.trim(),amount=Number(document.getElementById('newPayAmount').value),type=document.getElementById('newPayType').value,count=Number(document.getElementById('newPayCount').value),start=document.getElementById('newPayStart').value;if(!name||amount<=0||!start||(type==='installment'&&(!Number.isInteger(count)||count<1)))return alert('Completa nombre, valor, primer vencimiento y número de cuotas si corresponde.');const due=new Date(start+'T12:00:00');const day=due.getDate();const nextDue=start;data.payments.push({id:'custom-'+crypto.randomUUID(),name,amount,day,type,remaining:type==='installment'?count:null,period:0,active:true,note:note||'Agregado por ti',nextDue,dueRule:'fixedDay'});save();['newPayName','newPayNote','newPayAmount'].forEach(id=>document.getElementById(id).value='');document.getElementById('newPayStart').value=todayISO();alert(`Se agregó ${name}. Se reservarán ${money(amount/2)} de cada quincena para cubrir ${money(amount)} al mes.`)};
 document.getElementById('exportData').onclick=()=>{let blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='mi-dinero-respaldo.json';a.click();URL.revokeObjectURL(a.href)};
 document.getElementById('importData').onclick=()=>document.getElementById('importFile').click();
 document.getElementById('importFile').onchange=e=>{let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let x=JSON.parse(r.result);if(!x.incomes||!x.payments)throw 0;if(confirm('Esto reemplazará los datos actuales. ¿Continuar?')){data=x;save();alert('Respaldo importado.')}}catch(err){alert('El archivo no parece ser un respaldo válido.')}};r.readAsText(f)};
-document.getElementById('incomeDate').value=todayISO();document.getElementById('recordDate').value=todayISO();document.getElementById('newPayStart').value=todayISO();
+document.getElementById('incomeDate').value=todayISO();document.getElementById('recordDate').value=todayISO();document.getElementById('newPayStart').value=todayISO();document.getElementById('recordType').addEventListener('change',updateRecordForm);document.getElementById('recordCategory').addEventListener('change',updateRecordImpact);document.getElementById('recordAmount').addEventListener('input',updateRecordImpact);updateRecordForm();
 render();
 if('serviceWorker' in navigator && location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
 </script>
